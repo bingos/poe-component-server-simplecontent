@@ -5,7 +5,7 @@ my $path = 'content';
 
 my $content = POE::Component::Server::SimpleContent->spawn( root_dir => $path );
 
-POE::Component::Server:;SimpleHTTP->new(
+POE::Component::Server::SimpleHTTP->new(
    ALIAS => 'httpd',
    ADDRESS => '127.0.0.1',
    PORT => 8080,

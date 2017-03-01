@@ -1,5 +1,7 @@
 package POE::Component::Server::SimpleContent;
 
+#ABSTRACT: The easy way to serve web content with POE::Component::Server::SimpleHTTP.
+
 # We export some stuff
 require Exporter;
 @ISA = qw( Exporter );
@@ -15,9 +17,6 @@ use Filesys::Virtual::Plain;
 use MIME::Types;
 use Storable;
 use File::Basename;
-use vars qw($VERSION);
-
-$VERSION = '1.14';
 
 sub spawn {
   my $package = shift;
@@ -51,21 +50,15 @@ sub spawn {
   my $mm;
 
   eval {
-	require File::MMagic::XS;
-	import File::MMagic::XS qw(:compat);
-	$mm = File::MMagic::XS->new();
+	  require File::LibMagic;
+	  $mm = File::MMagic->new();
   };
 
-  eval {
-	require File::MMagic;
-	$mm = File::MMagic->new();
-  } unless $mm;
- 
   $self->{mm} = $mm;
 
   $self->{session_id} = POE::Session->create(
 	object_states => [
-		$self => { 
+		$self => {
                request  => '_request',
 			   shutdown => '_shutdown',
               -input    => '_read_input',
@@ -76,7 +69,7 @@ sub spawn {
 	( ( defined ( $options ) and ref ( $options ) eq 'HASH' ) ? ( options => $options ) : () ),
   )->ID();
 
-  return $self; 
+  return $self;
 }
 
 sub _start {
@@ -130,7 +123,7 @@ sub _request {
 	if ( $self->{vdir}->test('e', $realpath . $self->{index_file} ) ) {
 	  my ($filename, $directory, $suffix) = fileparse($self->{index_file}, keys %{ $self->{handlers} } );
 	  if ( $suffix ) {
-	     $kernel->post( 
+	     $kernel->post(
 		$self->{handlers}->{ $suffix }->{SESSION},
 		$self->{handlers}->{ $suffix }->{EVENT},
 		{
@@ -152,7 +145,7 @@ sub _request {
     if ( $self->{vdir}->test('e', $realpath) ) {
 	my ($filename, $directory, $suffix) = fileparse($realpath, keys %{ $self->{handlers} } );
 	if ( $suffix ) {
-	   $kernel->post( 
+	   $kernel->post(
 		$self->{handlers}->{ $suffix }->{SESSION},
 		$self->{handlers}->{ $suffix }->{EVENT},
 		{
@@ -196,7 +189,7 @@ sub session_id {
 }
 
 # Alias for deprecated function
-sub autoindex { 
+sub autoindex {
   warn "autoindex is deprecated: please use auto_index";
   goto &auto_index;
 }
@@ -272,12 +265,12 @@ sub _generate_dir_listing {
   my $realpath = $path;
   $realpath = $self->{prefix_path} . $path if $self->{prefix_path};
   $realpath =~ s/^$self->{prefix_fix}// if $self->{prefix_fix};
-  
+
   foreach my $item ( $self->{vdir}->list( $realpath ) ) {
 	next if $item =~ /^\./;
 	$content .= qq{<LI><A HREF="$path$item">$item</A></LI>\n};
   }
-  
+
   $content .= qq{</UL>\n} . end_html;
   $response->code( 200 );
   $response->header( 'Content-Type', 'text/html' );
@@ -299,7 +292,7 @@ sub _read_error {
   my $sender   = delete $read->{sender};
 
   delete $read->{wheel};
-  
+
   if ($error) {
     $response->content("Internal Server Error");
     $response->code(500);
@@ -308,7 +301,7 @@ sub _read_error {
 	unless ( $mimetype ) {
 	  if ( $self->{mm} ) {
 		$mimetype = $self->{mm}->checktype_contents( $$content );
-	  } 
+	  }
 	  else {
 		$mimetype = 'application/octet-stream';
 	  }
@@ -317,7 +310,7 @@ sub _read_error {
 	$response->content_type( $mimetype );
 	$response->content_ref( $content );
   }
-  
+
   $kernel->post( $sender => 'DONE' => $response );
 }
 
@@ -340,7 +333,7 @@ sub _generate_content {
 	unless ( $mimetype ) {
 	  if ( $self->{mm} ) {
 		$mimetype = $self->{mm}->checktype_contents( $content );
-	  } 
+	  }
 	  else {
 		$mimetype = 'application/octet-stream';
 	  }
@@ -380,7 +373,7 @@ sub _generate_content {
 
 sub _massage_handlers {
   my $handler = shift || return;
-  croak( "HANDLERS is not a ref to an hash!" ) 
+  croak( "HANDLERS is not a ref to an hash!" )
 	unless ref $handler and ref $handler eq 'HASH';
   foreach my $ext ( keys %{ $handler } ) {
     delete $handler->{ $ext } unless ref $handler->{ $ext } eq 'HASH';
@@ -408,17 +401,17 @@ sub set_handlers {
   return 1;
 }
 
-1;
+qq[Content Simples];
 
-__END__
+=pod
 
-=head1 NAME
+=for Pod::Coverage autoindex
 
-POE::Component::Server::SimpleContent - The easy way to serve web content with POE::Component::Server::SimpleHTTP.
+=cut
 
 =head1 SYNOPSIS
 
-  # A simple web server 
+  # A simple web server
   use POE qw(Component::Server::SimpleHTTP Component::Server::SimpleContent);
 
   my $content = POE::Component::Server::SimpleContent->spawn( root_dir => '/blah/blah/path' );
@@ -445,7 +438,7 @@ POE::Component::Server::SimpleContent is a companion L<POE> component to L<POE::
 
 As demonstrated in the SYNOPSIS, POE::Component::Server::SimpleContent integrates with L<POE::Component::Server::SimpleHTTP>. General usage involves setting up your own custom handlers *before* a catchall handler which will route HTTP requests to SimpleContent.
 
-The component generates a minimal 404 error page as a response if the requested URL doesn't not exist in the virtual filesystem. It will generate a minimal 403 forbidden page if 'auto_index' is set to 0 and a requested directory doesn't have an 'index_file' 
+The component generates a minimal 404 error page as a response if the requested URL does not exist in the virtual filesystem. It will generate a minimal 403 forbidden page if 'auto_index' is set to 0 and a requested directory doesn't have an 'index_file'
 
 Directory indexing is supported by default, though don't expect anything really fancy.
 
@@ -457,30 +450,30 @@ One may also specify handlers for particular extension types.
 
 =item spawn
 
-Requires one mandatory argument, 
+Requires one mandatory argument,
 
- 'root_dir', the file system path which will become the root of the virtual filesystem. 
+ 'root_dir', the file system path which will become the root of the virtual filesystem.
 
 Optional arguments are:
 
  prefix_path  specify a path within the virtual filesystem that will be prefixed to
 	      the url path to find the real path for content;
- alias_path - specify a path that will be removed from the front of url path to find 
+ alias_path - specify a path that will be removed from the front of url path to find
 	      the real path for content within the virtual filesystem;
  alias      - the POE::Kernel alias to set for the component's session;
  options    - a hashref of POE::Session options to pass to the component's session;
  index_file - the filename that will be used if someone specifies a directory path,
 	      default is 'index.html';
  auto_index - whether directory indexing is performed, default is 1;
- blocking   - specify whether blocking file reads are to be used, default 0 non-blocking 
+ blocking   - specify whether blocking file reads are to be used, default 0 non-blocking
 	      ( this option is ignored on Win32, which does not support non-blocking ).
  handlers   - a hashref of file extension handlers.
 
 File extension handlers are a hashref keyed on file extension ( without the preceeding dot '.' ), of
-further hashrefs, with the keys 'SESSION' for the POE::Session to that will be handling this file 
+further hashrefs, with the keys 'SESSION' for the POE::Session to that will be handling this file
 extension and 'EVENT' for the event to trigger in that session.
 
-  handlers => { 
+  handlers => {
 		pl  => { SESSION => 'foobar', EVENT => 'foo' },
 		cgi => { SESSION => 3, EVENT => 'cgi_handler' },
   },
@@ -518,7 +511,7 @@ Takes no arguments, shuts down the component's session.
 
 =item request
 
-Requires two arguments, a L<HTTP::Request> object and L<HTTP::Response> object. See OUTPUT 
+Requires two arguments, a L<HTTP::Request> object and L<HTTP::Response> object. See OUTPUT
 for what is returned by this method.
 
   $content->request( $request_obj, $response_obj );
@@ -549,7 +542,7 @@ These are the events that the component will accept.
 
 =item request
 
-Requires two arguments, a L<HTTP::Request> object and L<HTTP::Response> object. See OUTPUT 
+Requires two arguments, a L<HTTP::Request> object and L<HTTP::Response> object. See OUTPUT
 for what is returned by this method.
 
   $kernel->post( $content->session_id() => request => $request_obj => $response_obj );
@@ -571,7 +564,7 @@ object API or the session API. The event is 'DONE' to maintain compatibility wit
 
 =item DONE
 
-ARG0 will be a L<HTTP::Response> object. 
+ARG0 will be a L<HTTP::Response> object.
 
 =back
 
@@ -596,19 +589,19 @@ The following functions are exported:
 
 =item generate_301
 
-Takes two mandatory arguments, a path and a L<HTTP::Response> object. 
+Takes two mandatory arguments, a path and a L<HTTP::Response> object.
 
 Returns the L<HTTP::Response> object with the content applicable for a 301 HTTP response.
 
 =item generate_403
 
-Takes one mandatory argument, a L<HTTP::Response> object. 
+Takes one mandatory argument, a L<HTTP::Response> object.
 
 Returns the L<HTTP::Response> object with the content applicable for a 403 HTTP response.
 
 =item generate_404
 
-Takes one mandatory argument, a L<HTTP::Response> object. 
+Takes one mandatory argument, a L<HTTP::Response> object.
 
 Returns the L<HTTP::Response> object with the content applicable for a 404 HTTP response.
 
@@ -625,16 +618,6 @@ Use L<POE::Wheel::Run> to provide full non-blocking content serving.
 More comprehensive HTTP error handling, with the ability to specify custom 404 error pages.
 
 More 'fancy' directory listing.
-
-=head1 AUTHOR
-
-Chris 'BinGOs' Williams
-
-=head1 LICENSE
-
-Copyright (C) Chris Williams
-
-This module may be used, modified, and distributed under the same terms as Perl itself. Please see the license that came with your Perl distribution for details.
 
 =head1 KUDOS
 
